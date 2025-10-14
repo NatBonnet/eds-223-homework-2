@@ -1,0 +1,90 @@
+---
+title: "EDS 223: Homework 2"
+subtitle: ""
+author: "Nathalie Bonnet"
+date: 2025-10-18
+format: html
+warning: false
+message: false
+---
+
+# Setup Code
+
+1.  Loading necessary libraries
+
+```{r}
+#| output: false
+# Read in necessary libraries
+library(tidyverse)
+library(sf)
+library(here)
+library(tmap)
+```
+
+2.  Importing data
+
+```{r}
+ejscreen <- read_sf(here::here("data", "ejscreen" , "EJSCREEN_2023_BG_StatePct_with_AS_CNMI_GU_VI.gdb"))
+
+redline <- read_sf(here::here("data", "mapping-inequality", "mapping-inequality-los-angeles.json"))
+
+gbif <- read_sf(here::here("data", "gbif-birds-LA", "gbif-birds-LA.shp"))
+```
+
+
+Check class of data
+```{r}
+# Check class of each object
+class(ejscreen)
+
+class(redline)
+
+class(gbif)
+```
+Check crs of each dataframe
+```{r}
+st_crs(ejscreen)
+
+st_crs(redline)
+
+st_crs(gbif)
+```
+
+
+Compare crs between each 
+```{r}
+st_crs(ejscreen) == st_crs(redline)
+
+st_crs(ejscreen) == st_crs(gbif) 
+
+st_crs(gbif) == st_crs(redline)
+```
+Match ejscreen to gbif and redline
+```{r}
+ejscreen <- st_transform(ejscreen, crs = st_crs(ejscreen))
+```
+
+Part 1: Legacy of redlining in current environmental (in)justice
+
+```{r}
+# Create map of LA by HOLC grade
+tm_shape(redline) + 
+  tm_polygons(
+    fill = 'grade',
+    fill.legend = tm_legend(title = "HOLC grade")
+    # Add legend title)
+  ) + # Set legend size
+  tm_title("Historic Home Owners’ Loan Corporation (HOLC) Grades in Los Angeles") + # Set map title
+  tm_layout(bg.color = "gray94") +
+  tm_scalebar(text.size = 0.8) +
+  tm_compass(position = c("top", "right"), 
+             text.size = 1)
+```
+the percentage of census block groups that fall within each HOLC grade
+Also include the percent of census black groups that don’t fall within a HOLC grade
+Hint: The HOLC data contains the grades and the EJScreen data contains the census blocks, so you will need to combine the data spatially before doing summary statistics. Once you combine and no longer need the geometries, you can use st_drop_geometry().
+
+```{r}
+
+```
+
