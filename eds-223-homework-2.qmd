@@ -4,8 +4,10 @@ subtitle: ""
 author: "Nathalie Bonnet"
 date: 2025-10-18
 format: html
-warning: false
-message: false
+execute: 
+  warning: false
+  message: false
+  cache: true
 ---
 
 # Setup Code
@@ -19,14 +21,17 @@ library(tidyverse)
 library(sf)
 library(here)
 library(tmap)
+library(patchwork)
 ```
 
 2.  Importing data
 
 ```{r}
+# Load in data
 ejscreen <- read_sf(here::here("data", "ejscreen" , "EJSCREEN_2023_BG_StatePct_with_AS_CNMI_GU_VI.gdb"))
 
-redline <- read_sf(here::here("data", "mapping-inequality", "mapping-inequality-los-angeles.json"))
+redline <- read_sf(here::here("data", "mapping-inequality", "mapping-inequality-los-angeles.json")) %>% 
+  st_make_valid() # Validate polygons
 
 gbif <- read_sf(here::here("data", "gbif-birds-LA", "gbif-birds-LA.shp"))
 ```
@@ -41,6 +46,8 @@ class(redline)
 
 class(gbif)
 ```
+
+
 Check crs of each dataframe
 ```{r}
 st_crs(ejscreen)
@@ -59,32 +66,124 @@ st_crs(ejscreen) == st_crs(gbif)
 
 st_crs(gbif) == st_crs(redline)
 ```
+
+
 Match ejscreen to gbif and redline
 ```{r}
-ejscreen <- st_transform(ejscreen, crs = st_crs(ejscreen))
+unique(st_is_valid(ejscreen))
+unique(st_is_valid(redline))
+unique(st_is_valid(gbif))
+```
+
+```{r}
+ejscreen <- st_transform(ejscreen, crs = st_crs(redline))
 ```
 
 Part 1: Legacy of redlining in current environmental (in)justice
 
 ```{r}
 # Create map of LA by HOLC grade
-tm_shape(redline) + 
-  tm_polygons(
-    fill = 'grade',
-    fill.legend = tm_legend(title = "HOLC grade")
-    # Add legend title)
-  ) + # Set legend size
+tm_shape(redline) + # Use redline data
+  tm_polygons( # Fill with polygons
+    fill.scale = tm_scale(values = c("#7CAF5F", # Colors
+                   "#5BA1C6", 
+                   "#EDD769", 
+                   "#951E00")),
+    fill = 'grade', # Fill by 'grade' column
+    fill.legend = tm_legend(title = "HOLC grade"), # Add title
+    fill_alpha = 0.5 # Make basemap visible under fill layer
+  ) +
+  tm_basemap("OpenStreetMap") + # Use streetmap data
   tm_title("Historic Home Owners’ Loan Corporation (HOLC) Grades in Los Angeles") + # Set map title
-  tm_layout(bg.color = "gray94") +
-  tm_scalebar(text.size = 0.8) +
-  tm_compass(position = c("top", "right"), 
-             text.size = 1)
+  tm_scalebar(text.size = 0.5) + # Set scalebar size
+  tm_compass(position = c("top", "right"), # Put compass on top right corner
+             text.size = 0.7) # Compass is larger
+
 ```
-the percentage of census block groups that fall within each HOLC grade
-Also include the percent of census black groups that don’t fall within a HOLC grade
-Hint: The HOLC data contains the grades and the EJScreen data contains the census blocks, so you will need to combine the data spatially before doing summary statistics. Once you combine and no longer need the geometries, you can use st_drop_geometry().
+
+
 
 ```{r}
+# Make a table representing the percentage of census groups within each grade
+
+# Join datasets using geometries
+la_county <- ejscreen %>%
+  filter(CNTY_NAME %in% c("Los Angeles County"))
+
+
+redline_census <- st_join(redline, la_county) %>%
+  st_drop_geometry()
+
+
+# OBJECTID is census block group
+
+grade_census_percent <- redline_census %>%
+  group_by(grade) %>%
+  summarise(census_percent = (n() / length(redline_census$grade)) * 100)
+
+knitr::kable(
+  grade_census_percent,
+  col.names = c("HOLC grade", "Percent"),
+  caption = "Percent of Los Angeles Census Blocks in each HOLC Grade",
+  align = "c"
+)
+
 
 ```
+
+Create at least two visualizations summarizing current conditions (from the EJScreen data) within HOLC grades using the mean of the following variables (you may combine variables or create separate plots):
+% low income
+percentile for Particulate Matter 2.5
+percentile for low life expectancy
+Use ggplot for your visualizations! You will first need to calculate mean of each variable grouped by HOLC grade.
+Write a brief paragraph reflecting on these results
+Interpret the patterns you observe in your results
+Discuss potential relationships between historical redlining grades and current environmental/socioeconomic conditions
+
+```{r}
+means_ejscreen <- redline_census %>% 
+  janitor::clean_names() %>% 
+  select(grade, lowincpct, pm25, lifeexppct) %>% 
+  group_by(grade) %>% 
+  summarise(mean_low_inc = (mean(lowincpct)*100), 
+            mean_pm25 = mean(pm25), 
+            mean_life = (mean(lifeexppct, na.rm = TRUE)*100)) 
+
+lowinc_plot <- ggplot(data = means_ejscreen, aes(x = mean_low_inc, y = grade, fill = grade)) +
+  geom_col() +
+  scale_fill_manual(values = c("#7CAF5F", "#5BA1C6", "#EDD769", "#951E00", "darkgrey")) +
+  theme_minimal() +
+  labs(
+    title = "Average Percent of Low Income Residents by HOLC Grade in Los Angeles ",
+    x = "% low income residents in area",
+    y = " ",
+    color = "Grade"
+  )
+  
+
+pm25_plot <- ggplot(data = means_ejscreen, aes(x = mean_pm25, y = grade, fill = grade)) +
+  geom_col() +
+  scale_fill_manual(values = c("#7CAF5F", "#5BA1C6", "#EDD769", "#951E00", "darkgrey")) +
+  theme_minimal() +
+  labs(
+    title = "Particulate Matter Pollution in Los Angeles by HOLC Grade",
+    x = "Average particulate matter air pollution (>2.5 um) in area",
+    y = "HOLC grades",
+    color = "Grade"
+  )
+
+lifeexp_plot <- ggplot(data = means_ejscreen, aes(x = mean_life, y = grade, fill = grade)) +
+  geom_col() +
+  scale_fill_manual(values = c("#7CAF5F", "#5BA1C6", "#EDD769", "#951E00", "darkgrey")) +
+  theme_minimal() +
+  labs(
+    title = "Percent of Residents with Low Life Expectancy at Birth in Los Angeles by HOLC Grade",
+    x = "% of residents in area",
+    y = " ",
+    color = "Grade"
+  )
+
+lowinc_plot + pm25_plot /lifeexp_plot
+```
+
 
