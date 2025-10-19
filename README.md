@@ -35,8 +35,11 @@ Teaching Assistant: Ale Vidal Meza
 
 ## Contents
 Data: contains folders with EJScreen, GBIF, and Redline data files
+
 eds-223-homework-2.html: rendered output for qmd
+
 eds-223-homework-2.qmd: data processing, analysis, and visualization code
+
 README.md: contains project overview information
 
 ```         
