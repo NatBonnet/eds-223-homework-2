@@ -7,7 +7,6 @@ format: html
 execute: 
   warning: false
   message: false
-  cache: true
 ---
 
 ## Setup Code
@@ -42,25 +41,25 @@ gbif <- read_sf(here::here("data", "gbif-birds-LA", "gbif-birds-LA.shp"))
 
 ```{r}
 #| output: false
-st_crs(ejscreen)
+if(st_crs(ejscreen) == st_crs(redline)){
+  print("ejscreen matches redline")
+} else {
+  warning("CRS doesn't match")
+}
 
-st_crs(redline)
+if(st_crs(ejscreen) == st_crs(gbif)){
+  print("ejscreen matches gbif")
+} else {
+  warning("CRS doesn't match")
+}
 
-st_crs(gbif)
+if(st_crs(redline) == st_crs(gbif)){
+  print("redline matches gbif")
+} else {
+  warning("CRS doesn't match")
+}
+
 ```
-
-
-Which CRS matches out of the data?
-
-```{r}
-#| output: false
-st_crs(ejscreen) == st_crs(redline)
-
-st_crs(ejscreen) == st_crs(gbif) 
-
-st_crs(gbif) == st_crs(redline)
-```
-
 
 4. Match ejscreen to gbif and redline so they can be joined by geometry
 
@@ -233,7 +232,7 @@ Overall, the observed disparity in health and environmental indicators between '
 # Join HOLC data with gbif bird observations
 bird_holc <- st_join(redline, gbif)
 
-#Visualize the percent of bird observations (sum by holc grade) and make a bar plot for percentafe by holc grade
+#Visualize the percent of bird observations (sum by holc grade) and make a bar plot for percentage by holc grade
 bird_obs <- bird_holc %>% 
   group_by(grade) %>% 
   summarise(percent_observed = (n() / length(bird_holc$grade))*100)
@@ -243,6 +242,7 @@ bird_obs <- bird_holc %>%
 2. Visualize results
 
 ```{r}
+# Plot bird observation data percent by HOLC grade
 ggplot(data = bird_obs, aes(x = percent_observed, y = grade, fill = grade)) +
   geom_col() +
   scale_fill_manual(values = c("#465C31", "#07537C", "#B68F40", "#750A30")) +
