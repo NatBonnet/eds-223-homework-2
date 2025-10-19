@@ -75,7 +75,7 @@ ejscreen <- st_transform(ejscreen, crs = st_crs(redline))
 
 ```{r}
 # Create map of LA by HOLC grade
-tm_shape(redline) + # Use redline data
+holc_map <- tm_shape(redline) + # Use redline data
   tm_polygons(
     # Fill with polygons
     fill.scale = tm_scale(values = c( # Set discrete color values
@@ -122,7 +122,7 @@ grade_census_percent <- redline_census %>%
 
 
 # Create a table of the amount of census blocks in each HOLC grade
-knitr::kable(
+holc_table <- knitr::kable(
   grade_census_percent,
   col.names = c("HOLC grade", "Percent"),
   caption = "Percent of Los Angeles Census Blocks in each HOLC Grade",
@@ -202,7 +202,16 @@ pm25_plot <- ggplot(data = means_ejscreen,
                      breaks = seq(from = 0, 
                                   to = 11, 
                                   by = 0.5))
+```
 
+Display visual outputs
+
+```{r}
+# Call map
+holc_map
+
+# Call table
+holc_table
 
 # Combine plots using patchwork
 lowinc_plot / lifeexp_plot / pm25_plot +
@@ -232,7 +241,7 @@ Overall, the observed disparity in health and environmental indicators between '
 # Join HOLC data with gbif bird observations
 bird_holc <- st_join(redline, gbif)
 
-#Visualize the percent of bird observations (sum by holc grade) and make a bar plot for percentage by holc grade
+# Summarize percent of bird observations (sum by holc grade)
 bird_obs <- bird_holc %>% 
   group_by(grade) %>% 
   summarise(percent_observed = (n() / length(bird_holc$grade))*100)
@@ -262,3 +271,13 @@ ggplot(data = bird_obs, aes(x = percent_observed, y = grade, fill = grade)) +
 From these results, we can say that that the greatest percent of all GBIF bird observations within Los Angeles HOLC grade areas were in 'C', at over 35%, with D and A having similar amounts around 22%. This is a likely outcome due to our findings from the percent of census blocks that fall within each grade. There are more observations of census data within C grades, which seems to correlate with land area on the map. Within our areas of interest from HOLC areas, it's likely that there are more bird observations within 'C' because it simply has the most area between groups, so more birds were observed within a larger area. 
 
 However, a similar analysis by Ellis-Soto et al. 2023 yielded results that said there were significantly higher bird densities is 'desirable' (historically white) neighborhoods. The reason for this difference is probably due to Ellis-Soto et al. incorporating differences in vegetation, open space, population density, and climate in their analyses. The above analyses represent raw observation count, but do not factor in other spatial variables that might suggest a more diverse/ abundant total bird population. 
+
+
+## References
+
+| Data | Citation | Source |
+|-------------------|-------------------|----------------------------------|
+| EJScreen Data | United States Environmental Protection Agency. 2015. EJSCREEN. Retrieved: 10/04/2025, from url (<http://www.epa.gov/ejscreen>) | <https://www.epa.gov/ejscreen>,<https://drive.google.com/file/d/1nG6Nj1bXfzQFOVMO8Km3eNy4SWu1YcIQ/view> |
+| GBIF Archive | GBIF. (n.d.). <https://www.gbif.org/> | <https://www.gbif.org/> |
+| Ellis-Soto et al. 2023 | Ellis-Soto, D., Chapman, M. & Locke, D.H. Historical redlining is associated with increasing geographical disparities in bird biodiversity sampling in the United States. Nat Hum Behav 7, 1869–1877 (2023). <https://doi.org/10.1038/s41562-023-01688-5> | <https://www.nature.com/articles/s41562-023-01688-5#citeas> |
+| Mapping Inequality: HOLC data | *Mapping inequality*. Digital Scholarship Lab. (n.d.). <https://dsl.richmond.edu/panorama/redlining/data> | <https://dsl.richmond.edu/panorama/redlining/data> |
